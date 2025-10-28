@@ -31,15 +31,15 @@ const mint = new PublicKey("6CYENncbX7Nnn8U2jezP1CtbL9Ymbfc9bPGmdUgVRoFp");
     console.log("Associated Token Account:", ata.address.toBase58());
 
     // Mint to ATA
-    /*const mintTx = await mintTo(
+    const mintTx = await mintTo(
       connection,
       keypair, // payer
       mint, // mint
       ata.address, // destination
       myWalletPublicKey, // authority
       10 * token_decimals // amount
-    );*/
-    //console.log("Mint Signature:", mintSignature);
+    );
+    console.log("Mint Signature:", mintTx);
   } catch (error) {
     console.error("Error minting tokens:", error);
   }
