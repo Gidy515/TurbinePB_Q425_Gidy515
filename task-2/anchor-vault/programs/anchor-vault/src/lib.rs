@@ -84,7 +84,7 @@ pub struct Deposit <'info> {
     pub vault_state: Account<'info, VaultState>,
     #[account(
         mut,
-        seeds = [b"vault", user.key().as_ref()],
+        seeds = [b"vault", vault_state.key().as_ref()],
         bump = vault_state.state_bump,
     )]
     pub vault: SystemAccount<'info>,
@@ -119,7 +119,7 @@ pub struct Withdraw <'info>{
     pub vault_state: Account<'info, VaultState>,
     #[account(
         mut,
-        seeds = [b"vault", user.key().as_ref()],
+        seeds = [b"vault", vault_state.key().as_ref()],
         bump = vault_state.state_bump,
     )]
     pub vault: SystemAccount<'info>,

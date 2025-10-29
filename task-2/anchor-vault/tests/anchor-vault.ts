@@ -5,9 +5,9 @@ import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 
 describe("anchor-vault", () => {
   // Configure the client to use the local cluster.
-  anchor.setProvider(anchor.AnchorProvider.env());
 
   const provider = anchor.AnchorProvider.env(); // Load the default provider from the Anchor environment (usually your local wallet and devnet/localnet RP
+  anchor.setProvider(provider);
 
   const program = anchor.workspace.anchorVault as Program<AnchorVault>;
 
@@ -84,6 +84,59 @@ describe("anchor-vault", () => {
       console.log(
         "Your vault balance",
         vaultInfo.lamports / LAMPORTS_PER_SOL,
+        "SOL"
+      );
+    } else {
+      console.log("Vault account not found");
+    }
+  });
+
+  // Third test: Withdraw 1 SOL
+  it("Withdraw 1 SOL", async () => {
+    // Calls the `withdraw` instruction with 1 SOL
+    const tx = await program.methods
+      .withdraw(new anchor.BN(1 * LAMPORTS_PER_SOL)) // Withdraw 1 SOL
+      .accountsPartial({
+        user: provider.wallet.publicKey, // Signer
+        vaultState,
+        vault,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .rpc(); // Send transaction
+
+    // Log the transaction and show raw vault data (still exists)
+    console.log("\nYour transaction signature", tx);
+    console.log(
+      "Your vault balance",
+      (await provider.connection.getAccountInfo(vault)).toString()
+    );
+  });
+
+  // Final test: Close the vault and vault state
+  it("Close the vault", async () => {
+    // Calls the `close` instruction to close both accounts and reclaim lamports
+    const tx = await program.methods
+      .close()
+      .accountsPartial({
+        user: provider.wallet.publicKey, // Signer
+        vaultState,
+        vault,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .rpc(); // Send transaction
+
+    // Log the signature and verify vault is now closed (should be null)
+    console.log("\nYour transaction signature", tx);
+    /*console.log("Your vault balance", 
+        await provider.connection.getAccountInfo(vault)
+      );*/
+    const closedVaultInfo = await provider.connection.getAccountInfo(vault);
+
+    if (closedVaultInfo) {
+      // If vault exists, print balance in SOL
+      console.log(
+        "Your closed vault balance",
+        closedVaultInfo.lamports / LAMPORTS_PER_SOL,
         "SOL"
       );
     } else {
