@@ -21,13 +21,13 @@ pub mod vault_savings {
         Ok(())
     }
 
-    pub fn withdrawal(ctx: Context<Operations>, amount: u64) -> Result<()> {
-        ctx.accounts.withdrawal(amount)?;
+    pub fn check_balance(ctx: Context<Operations>) -> Result<()> {
+        ctx.accounts.check_balance()?;
         Ok(())
     }
 
-    pub fn check_balance(ctx: Context<Operations>) -> Result<()> {
-        ctx.accounts.check_balance()?;
+    pub fn withdrawal(ctx: Context<Operations>, amount: u64) -> Result<()> {
+        ctx.accounts.withdrawal(amount)?;
         Ok(())
     }
 }
@@ -117,6 +117,8 @@ impl <'info> Operations<'info> {
             let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer_seeds);
 
             transfer(cpi_ctx, self.vault_savings_account.lamports())?;
+
+            self.state.close(self.user.to_account_info())?;
         }
 
         Ok(())
