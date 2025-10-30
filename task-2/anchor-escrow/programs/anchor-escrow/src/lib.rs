@@ -22,6 +22,12 @@ pub mod anchor_escrow {
         ctx.accounts.deposit(deposit)?;
         Ok(())
     }
+
+    pub fn take(ctx: Context<Make>, seed: u64, deposit: u64, receive_amount: u64) -> Result<()> {
+        ctx.accounts.init_escrow(seed, receive_amount, &ctx.bumps)?;
+        ctx.accounts.deposit(deposit)?;
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
