@@ -4,9 +4,25 @@ import { VaultSavings } from "../target/types/vault_savings";
 
 describe("vault-savings", () => {
   // Configure the client to use the local cluster.
-  anchor.setProvider(anchor.AnchorProvider.env());
+
+  const provider = anchor.AnchorProvider.env();
+  anchor.setProvider(provider);
 
   const program = anchor.workspace.vaultSavings as Program<VaultSavings>;
+
+  const vaultState = anchor.web3.PublicKey.findProgramAddressSync(
+    [Buffer.from("state"), provider.publicKey.toBuffer()],
+    program.programId[0]
+  );
+
+  const vaultSavingsAccount = anchor.web3.PublicKey.findProgramAddressSync(
+    [
+      Buffer.from("vault"),
+      vaultState[0].toBytes(),
+      provider.publicKey.toBuffer(),
+    ],
+    program.programId[0]
+  );
 
   it("Is initialized!", async () => {
     // Add your test here.
