@@ -2,7 +2,7 @@
 #[allow(deprecated)]
 
 use anchor_lang::{prelude::*, system_program::{Transfer, transfer}, InitSpace};
-use anchor_lang::{accounts::signer, prelude::{SystemAccount, borsh::de}};
+use anchor_lang::{prelude::{SystemAccount}};
 
 declare_id!("FGTAsN5tZWpaALtLYPCdNkserZY6WPL7H1MMwhxb5cNS");
 
@@ -53,7 +53,7 @@ pub struct Initialize <'info>{
 
 impl <'info> Initialize<'info> {
     pub fn initialize(&mut self, bumps: InitializeBumps) -> Result<()> {
-        let rent_exempt= Rent::get()?.minimum_balance(self.vault_state.to_account_info().data_len());
+        let rent_exempt = Rent::get()?.minimum_balance(self.vault_state.to_account_info().data_len());
 
         let cpi_program= self.system_program.to_account_info();
 

@@ -1,0 +1,10 @@
+{
+  "name": "Gidy Token",
+  "symbol": "GIDY",
+  "description": "A creative and powerful token representing innovation by Gidy on Solana.",
+  "image": "https://gateway.pinata.cloud/ipfs/QmExampleImageHash",
+  "attributes": [
+    { "trait_type": "Creator", "value": "Gidy" },
+    { "trait_type": "Network", "value": "Solana Devnet" }
+  ]
+}

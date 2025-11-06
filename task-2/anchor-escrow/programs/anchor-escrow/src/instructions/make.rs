@@ -29,7 +29,7 @@ pub struct Make<'info> {
     pub maker_ata_a: InterfaceAccount<'info, TokenAccount>,
     #[account(
         init,
-        payer =maker,
+        payer = maker,
         space = 8 + Escrow::INIT_SPACE,
         seeds = [b"escrow", maker.key().as_ref(), seed.to_le_bytes().as_ref()],
         bump,

@@ -79,4 +79,18 @@ describe("vault-savings", () => {
       .rpc();
     console.log("Your transaction signature", tx);
   });
+
+  it("Deposits 3 SOL!", async () => {
+    // Add your test here.
+    const tx = await program.methods
+      .deposit(new anchor.BN(3 * anchor.web3.LAMPORTS_PER_SOL))
+      .accountsPartial({
+        user: provider.publicKey,
+        state: vaultState,
+        vaultSavingsAccount: vaultSavingsAccount,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .rpc();
+    console.log("Your transaction signature", tx);
+  });
 });
