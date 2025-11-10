@@ -25,4 +25,4 @@ const connection = new Connection("https://api.devnet.solana.com", commitment);
   }
 })();
 
-// Mint Address: 5SQmkV3KrAXX3KACStFELGCL6iDSoMcT6njTQxW6eu32
+// Mint Address: J3YbfzYE8ShsPU8Rb4LZe3c1zuRBXA2dDTrTm3vcF4Vj
