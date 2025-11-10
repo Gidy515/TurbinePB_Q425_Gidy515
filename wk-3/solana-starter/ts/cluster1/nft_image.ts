@@ -14,7 +14,7 @@ const umi = createUmi("https://api.devnet.solana.com");
 let keypair = umi.eddsa.createKeypairFromSecretKey(new Uint8Array(wallet));
 const signer = createSignerFromKeypair(umi, keypair);
 
-umi.use(irysUploader());
+umi.use(irysUploader({ address: "https://devnet.irys.xyz/" }));
 umi.use(signerIdentity(signer));
 
 (async () => {
@@ -22,9 +22,13 @@ umi.use(signerIdentity(signer));
     //1. Load image
     //2. Convert image to generic file.
     //3. Upload image
-    // const image = ???
-    // const [myUri] = ???
-    // console.log("Your image URI: ", myUri);
+    const image = await readFile("./catnft.jpg");
+
+    const file = createGenericFile(image, "catnft.jpg", {
+      contentType: "image/jpg",
+    });
+    const myUri = await umi.uploader.upload([file]);
+    console.log("Your image URI: ", myUri);
   } catch (error) {
     console.log("Oops.. Something went wrong", error);
   }
