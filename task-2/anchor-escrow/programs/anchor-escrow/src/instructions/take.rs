@@ -7,7 +7,7 @@ use anchor_spl::{
 use crate::state::Escrow;
 
 #[derive(Accounts)]
-// #[instruction(seed: u64)]
+#[instruction(seed: u64)]
 pub struct Take<'info> {
     #[account(mut)]
     pub taker: Signer<'info>,
