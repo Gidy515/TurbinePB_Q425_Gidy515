@@ -1,4 +1,3 @@
-use core::num;
 use std::vec;
 
 // function that finds the largest number in any list of numbers to avoid duplication
@@ -24,7 +23,7 @@ fn largest_char(char_list: &[char]) -> &char {
     return largest_charac;
 }
 
-fn generic_largest<T: PartialOrd>(list: &[T]) -> &T { // The essesnce of PartialOrd
+fn generic_largest<T: PartialOrd>(list: &[T]) -> &T { // The essesnce of PartialOrd is to allow comparison operations
     let mut biggest = &list[0];
 
     for item in list {
