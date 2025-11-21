@@ -6,6 +6,8 @@ use anchor_spl::{
 
 use crate::state::Escrow;
 
+use crate::error::ErrorCode;
+
 #[derive(Accounts)]
 #[instruction(seed: u64)]
 pub struct Buy<'info> {
@@ -71,60 +73,71 @@ pub struct Buy<'info> {
     pub system_program: Program<'info, System>,
 }
 
-impl <'info> Buy<'info> {
+impl<'info> Buy<'info> {
     pub fn take(&mut self) -> Result<()> {
+        // 1. Validate buyer balance
+        require!(
+            self.buyer_spl_ata.amount >= self.escrow.receive_amount,
+            ErrorCode::InsufficientBuyerBalance
+        );
 
-        let transfer_accounts = TransferChecked {
+        // 2. Transfer SPL tokens from buyer -> seller
+        let pay_seller_accounts = TransferChecked {
             from: self.buyer_spl_ata.to_account_info(),
             mint: self.mint_spl.to_account_info(),
             to: self.seller_nft_ata.to_account_info(),
             authority: self.buyer.to_account_info(),
         };
 
-        let cpi_ctx = CpiContext::new(self.token_program.to_account_info(), transfer_accounts);
+        let cpi_ctx = CpiContext::new(self.token_program.to_account_info(), pay_seller_accounts);
 
-        transfer_checked(cpi_ctx, self.escrow.receive_amount, self.mint_spl.decimals);
+        transfer_checked(cpi_ctx, self.escrow.receive_amount, self.mint_spl.decimals)?;
 
         Ok(())
     }
 
     pub fn withdraw_and_close_vault(&mut self) -> Result<()> {
-        //let maker_key = self.maker.key();
-        let signer_seeds: [&[&[u8]]; 1] = [&[
+        // PDA signer
+        let signer_seeds: &[&[u8]] = &[
             b"escrow",
-            self.seller.to_account_info().key.as_ref(),
-            &self.escrow.seed.to_le_bytes()[..],
+            self.seller.key.as_ref(),
+            &self.escrow.seed.to_le_bytes(),
             &[self.escrow.bump],
-        ]];
+        ];
 
-        let transfer_accounts = TransferChecked {
+        let signer = &[signer_seeds];
+
+        // 3. Transfer NFT from vault PDA -> buyer
+        let withdraw_nft_accounts = TransferChecked {
             from: self.vault.to_account_info(),
-            to: self.buyer_spl_ata.to_account_info(),
-            authority: self.escrow.to_account_info(), // authority should be maker
             mint: self.mint_nft.to_account_info(),
+            to: self.buyer_nft_ata.to_account_info(),
+            authority: self.escrow.to_account_info(),
         };
 
         let cpi_ctx = CpiContext::new_with_signer(
             self.token_program.to_account_info(),
-            transfer_accounts,
-            &signer_seeds,
+            withdraw_nft_accounts,
+            signer,
         );
 
-        transfer_checked(cpi_ctx, self.vault.amount, self.mint_nft.decimals);
+        transfer_checked(cpi_ctx, self.escrow.sell_amount, self.mint_nft.decimals)
+            .map_err(|_| ErrorCode::FailedVaultWithdrawal)?;
 
+        // 4. Close vault ATA
         let close_accounts = CloseAccount {
             account: self.vault.to_account_info(),
             destination: self.seller.to_account_info(),
             authority: self.escrow.to_account_info(),
         };
 
-        let close_cpi_ctx = CpiContext::new_with_signer(
+        let close_ctx = CpiContext::new_with_signer(
             self.token_program.to_account_info(),
             close_accounts,
-            &signer_seeds,
+            signer,
         );
 
-        close_account(close_cpi_ctx);
+        close_account(close_ctx).map_err(|_| ErrorCode::FailedVaultClosure)?;
 
         Ok(())
     }
