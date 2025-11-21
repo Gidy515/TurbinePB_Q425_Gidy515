@@ -29,7 +29,7 @@ pub struct Sell<'info> {
     pub seller_nft_ata: InterfaceAccount<'info, TokenAccount>,
     #[account(
         mut,
-        associated_token::mint = mint_nft,
+        associated_token::mint = mint_spl,
         associated_token::authority = seller,
         associated_token::token_program = token_program
     )]
@@ -94,7 +94,7 @@ impl <'info> Sell<'info> {
 
         // Update the escrow account (e.g., track how much was deposited)
         self.escrow_offer.sell_amount = deposit;
-        
+
         Ok(())
     }
 }
