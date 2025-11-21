@@ -17,6 +17,9 @@ pub enum ErrorCode {
     #[msg("Failed to withdraw tokens from vault")]
     FailedVaultWithdrawal,
 
+    #[msg("Cannot cancel escrow: buyer has already paid.")]
+    CannotCancelAlreadyPurchased,
+
     #[msg("Failed to close vault account")]
     FailedVaultClosure,
 

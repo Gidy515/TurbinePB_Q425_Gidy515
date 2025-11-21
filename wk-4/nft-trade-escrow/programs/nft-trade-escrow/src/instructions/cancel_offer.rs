@@ -6,6 +6,8 @@ use anchor_spl::{
 
 use crate::state::Escrow;
 
+use crate::error::ErrorCode;
+
 #[derive(Accounts)]
 #[instruction(seed: u64)]
 pub struct Refund<'info> {
@@ -42,45 +44,65 @@ pub struct Refund<'info> {
     pub system_program: Program<'info, System>,
 }
 
-impl <'info> Refund<'info> {
+impl<'info> Refund<'info> {
     pub fn refund_and_close(&mut self) -> Result<()> {
-        //let maker_key = self.maker.key();
-        let signer_seeds: [&[&[u8]]; 1] = [&[
+
+        // 1. Ensure escrow has not been fulfilled by buyer
+        require!(
+            !self.escrow.is_fulfilled,
+            ErrorCode::CannotCancelAlreadyPurchased
+        );
+
+        // 2. Ensure NFT is actually still inside the vault
+        require!(
+            self.vault.amount >= self.escrow.sell_amount,
+            ErrorCode::FailedRefundTransfer
+        );
+
+        // PDA signer seeds
+        let signer_seeds: &[&[&[u8]]] = &[&[
             b"escrow",
-            self.seller.to_account_info().key.as_ref(),
-            &self.escrow.seed.to_le_bytes()[..],
+            self.seller.key.as_ref(),
+            &self.escrow.seed.to_le_bytes(),
             &[self.escrow.bump],
         ]];
 
+        // 3. Transfer NFT from vault PDA -> seller NFT ATA
         let transfer_accounts = TransferChecked {
             from: self.vault.to_account_info(),
             to: self.seller_nft_ata.to_account_info(),
-            authority: self.escrow.to_account_info(), 
             mint: self.mint_nft.to_account_info(),
+            authority: self.escrow.to_account_info(),
         };
 
         let cpi_ctx = CpiContext::new_with_signer(
             self.token_program.to_account_info(),
             transfer_accounts,
-            &signer_seeds,
+            signer_seeds,
         );
 
-        transfer_checked(cpi_ctx, self.vault.amount, self.mint_nft.decimals)?;
+        transfer_checked(
+            cpi_ctx,
+            self.escrow.sell_amount,
+            self.mint_nft.decimals,
+        ).map_err(|_| ErrorCode::FailedRefundTransfer)?;
 
+        // 4. Close the vault ATA and return rent to seller
         let close_accounts = CloseAccount {
             account: self.vault.to_account_info(),
             destination: self.seller.to_account_info(),
             authority: self.escrow.to_account_info(),
         };
 
-        let close_cpi_ctx = CpiContext::new_with_signer(
+        let close_ctx = CpiContext::new_with_signer(
             self.token_program.to_account_info(),
             close_accounts,
-            &signer_seeds,
+            signer_seeds,
         );
 
-        close_account(close_cpi_ctx)?;
+        close_account(close_ctx).map_err(|_| ErrorCode::FailedRefundClosure)?;
 
         Ok(())
     }
 }
+

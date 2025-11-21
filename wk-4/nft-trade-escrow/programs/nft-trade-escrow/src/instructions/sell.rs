@@ -74,6 +74,7 @@ impl <'info> Sell<'info> {
             mint_spl: self.mint_spl.key(), 
             sell_amount,
             receive_amount, 
+            is_fulfilled: false,
             bump: bumps.escrow_offer,
         });
 

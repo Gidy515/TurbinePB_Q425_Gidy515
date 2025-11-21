@@ -74,7 +74,7 @@ pub struct Buy<'info> {
 }
 
 impl<'info> Buy<'info> {
-    pub fn take(&mut self) -> Result<()> {
+    pub fn buy(&mut self) -> Result<()> {
         // 1. Validate buyer balance
         require!(
             self.buyer_spl_ata.amount >= self.escrow.receive_amount,
@@ -92,6 +92,8 @@ impl<'info> Buy<'info> {
         let cpi_ctx = CpiContext::new(self.token_program.to_account_info(), pay_seller_accounts);
 
         transfer_checked(cpi_ctx, self.escrow.receive_amount, self.mint_spl.decimals)?;
+
+        self.escrow.is_fulfilled = true;
 
         Ok(())
     }
