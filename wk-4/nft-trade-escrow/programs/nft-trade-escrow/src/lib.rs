@@ -13,12 +13,41 @@ use state::*;
 #[program]
 pub mod nft_trade_escrow {
     use super::*;
+    
+    pub fn sell(
+        mut ctx: Context<Sell>,
+        seed: u64,
+        sell_amount: u64,
+        receive_amount: u64,
+    ) -> Result<()> {
+        let accounts = &mut ctx.accounts;
 
-    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
-        msg!("Greetings from: {:?}", ctx.program_id);
+        accounts.init_escrow(seed, sell_amount, receive_amount, &ctx.bumps)?;
+        accounts.deposit(sell_amount)?;
+
+        Ok(())
+    }
+
+    pub fn buy(
+        mut ctx: Context<Buy>,
+        seed: u64,
+    ) -> Result<()> {
+        let accounts = &mut ctx.accounts;
+
+        accounts.buy()?;
+        accounts.withdraw_and_close_vault()?;
+
+        Ok(())
+    }
+
+    pub fn refund(
+        mut ctx: Context<Refund>,
+        seed: u64,
+    ) -> Result<()> {
+        let accounts = &mut ctx.accounts;
+
+        accounts.refund_and_close()?;
+
         Ok(())
     }
 }
-
-#[derive(Accounts)]
-pub struct Initialize {}
