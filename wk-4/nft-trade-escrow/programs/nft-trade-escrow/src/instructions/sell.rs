@@ -5,7 +5,7 @@ use anchor_spl::{
     associated_token::AssociatedToken,
 };
 
-use crate::state::Escrow;
+use crate::{error::ErrorCode, state::Escrow};
 
 #[derive(Accounts)]
 #[instruction(seed: u64)]
@@ -58,6 +58,15 @@ pub struct Sell<'info> {
 
 impl <'info> Sell<'info> {
     pub fn init_escrow(&mut self, seed: u64, sell_amount: u64, receive_amount: u64, bumps: &SellBumps) -> Result<()> {
+        // Validate amounts
+        require!(sell_amount > 0, ErrorCode::InvalidAmount);
+        require!(receive_amount > 0, ErrorCode::InvalidAmount);
+
+        // Validate token mints are different
+        require!(
+            self.mint_nft.key() != self.mint_spl.key(),
+            ErrorCode::InvalidTokenMint
+        );
         self.escrow_offer.set_inner(Escrow {
             seed, 
             seller: self.seller.key(), 
@@ -83,6 +92,9 @@ impl <'info> Sell<'info> {
 
         transfer_checked(cpi_ctx, deposit, self.mint_nft.decimals)?;
 
+        // Update the escrow account (e.g., track how much was deposited)
+        self.escrow_offer.sell_amount = deposit;
+        
         Ok(())
     }
 }
