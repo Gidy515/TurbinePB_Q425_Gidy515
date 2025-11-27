@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "generics",
+    "traits",
+    "trait-caller-functions",
+]

@@ -1,0 +1,8 @@
+[package]
+name = "trait-caller-function"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+generics = { path = "../generics" }
+traits = { path = "../traits" }

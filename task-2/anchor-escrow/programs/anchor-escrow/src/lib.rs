@@ -23,9 +23,13 @@ pub mod anchor_escrow {
         Ok(())
     }
 
-    pub fn take(ctx: Context<Make>, seed: u64, deposit: u64, receive_amount: u64) -> Result<()> {
-        ctx.accounts.init_escrow(seed, receive_amount, &ctx.bumps)?;
-        ctx.accounts.deposit(deposit)?;
+    pub fn refund(ctx: Context<Refund>, _seed: u64) -> Result<()> {
+        ctx.accounts.refund_and_close()?;
+        Ok(())
+    }
+
+    pub fn take(ctx: Context<Take>, _seed: u64, deposit: u64) -> Result<()> {
+        ctx.accounts.take_and_close(deposit)?;
         Ok(())
     }
 }
