@@ -34,7 +34,7 @@ impl Summary for Tweet {
 
 // Implementing the trait Summary on the NewsArticle and Tweet types
 
-#[cfg(test)]
+/*#[cfg(test)]
 mod tests {
     //use super::*;
 
@@ -54,5 +54,12 @@ mod tests {
         };
         tweet.summarize();
     }*/
+}*/
+
+// Default Implementations
+pub trait Summary2 {
+    fn summarize_two (&self) -> String {
+        String::from(("Read more..."))  // defining a Summary trait with a default implementation of the summarize method
+    }
 }
 
