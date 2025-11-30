@@ -63,3 +63,24 @@ pub trait Summary2 {
     }
 }
 
+impl Summary2 for NewsArticle {
+    /*fn summarize_two(&self) -> String {
+        //format!("{}, by {} ({})", self.headline, self.author, self.location)
+     // Implementation block should be empty when making use of a default trait   
+    }*/
+}
+
+pub trait Summary3 {
+    fn summarize_author(&self) -> String;
+
+    fn summarize_three(&self) -> String {
+        format!("(Read more from {}...)", self.summarize_author())
+    }
+}
+
+impl Summary3 for Tweet {
+    fn summarize_author(&self) -> String {
+        format!("@{}", self.username)
+    }
+}
+

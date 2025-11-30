@@ -1,4 +1,4 @@
-use traits::{NewsArticle, Summary, Tweet};
+use traits::{NewsArticle, Tweet, Summary, Summary2, Summary3};
 //use aggregator::{Summary, Tweet};
 
 fn main() {
@@ -17,4 +17,6 @@ fn main() {
         content: String::from("The Pittsburgh Penguins once again are the best hockey team in the NHL.",),
     };
     println!("New article available! {}", article.summarize());
+    println!("New article available! {}", article.summarize_two());
+    println!("One new tweet {}", tweet.summarize_author());
 }
