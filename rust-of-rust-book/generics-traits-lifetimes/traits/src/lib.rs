@@ -74,7 +74,7 @@ pub trait Summary3 {
     fn summarize_author(&self) -> String;
 
     fn summarize_three(&self) -> String {
-        format!("(Read more from {}...)", self.summarize_author())
+        format!("(Read more from {}...)", self.summarize_author()) // using the summarize_author method in the default implementation of summarize_three
     }
 }
 
@@ -82,5 +82,10 @@ impl Summary3 for Tweet {
     fn summarize_author(&self) -> String {
         format!("@{}", self.username)
     }
+}
+
+// Traits as Parameters
+pub fn notify(item: &impl Summary) {
+    println!("Breaking news! {}", item.summarize());
 }
 

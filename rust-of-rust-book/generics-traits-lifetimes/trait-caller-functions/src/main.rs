@@ -1,4 +1,4 @@
-use traits::{NewsArticle, Tweet, Summary, Summary2, Summary3};
+use traits::{NewsArticle, Tweet, Summary, Summary2, Summary3, notify};
 //use aggregator::{Summary, Tweet};
 
 fn main() {
@@ -9,6 +9,8 @@ fn main() {
         retweet: false,
     };
     println!("1 new tweet: {}", tweet.summarize());
+    notify(&tweet); // Using trait as parameter, calling notify function from traits crate
+    // what will be printed when we call notify(&tweet) is the notify function plus the summarize method from the Tweet struct implementation of the Summary trait 
 
     let article = NewsArticle {
         headline: String::from("Penguins win the Stanley Cup Championship!"),
@@ -19,4 +21,5 @@ fn main() {
     println!("New article available! {}", article.summarize());
     println!("New article available! {}", article.summarize_two());
     println!("One new tweet {}", tweet.summarize_author());
+    println!("Another banger tweet {}", tweet.summarize_three());
 }
