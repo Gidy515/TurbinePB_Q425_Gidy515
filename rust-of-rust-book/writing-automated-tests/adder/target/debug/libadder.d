@@ -1,0 +1,1 @@
+/home/emperor/gidy-turbin3/q4-turbin3-prebuilder-gidy/rust-of-rust-book/writing-automated-tests/adder/target/debug/libadder.rlib: /home/emperor/gidy-turbin3/q4-turbin3-prebuilder-gidy/rust-of-rust-book/writing-automated-tests/adder/src/lib.rs
