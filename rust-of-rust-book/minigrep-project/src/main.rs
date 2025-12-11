@@ -1,7 +1,7 @@
 use std::env; use std::env::args;
 use std::process;
-// Reading Argument values
-use std::fs;
+
+use minigrep_project::Config;
 
 fn main() {
     let args: Vec<String> = env::args().collect(); // collecting the command line arguments into a vector and printing them
@@ -40,39 +40,12 @@ fn main() {
         .expect("Should have been able to read the file");
     println!("With text:\n{contents}");*/
 
-    run(config);
+    //run(config);
+    if let Err(e) = minigrep_project::run(config) {
+        println!("Application error: {e}");
+        process::exit(1);
+    }
+
     
 }
 
-// The config struct shows that the query and file_path are connected
-struct Config {
-    query: String,
-    file_path: String,
-}
-
-/*fn parse_configs(args: &[String]) -> (&str, &str) {
-    let query = &args[1];
-    let file_path = &args[2];
-
-    (query, file_path)
-} */
-// Refactoring parse_config to return an instance of a Config struct
-
-impl Config {
-    fn new(args: &[String]) -> Result<Config, &'static str> { // returning a result from Config::build
-        // Adding a check for the number of arguments.
-        if args.len() < 3 {
-            panic!("Not enough arguments");
-        }
-        let query = args[1].clone();
-        let file_path = args[2].clone();
-
-        Ok(Config { query, file_path })
-    }
-}
-
-fn run(config: Config) {
-    let contents = fs::read_to_string(config.file_path)
-        .expect("Should have been able to read the file"); 
-    println!("With text:\n{contents}");
-}
