@@ -1,5 +1,5 @@
 use std::env; use std::env::args;
-use std::process;
+use std::process; // process helps to exit the program without panicking 
 
 use minigrep_project::Config;
 

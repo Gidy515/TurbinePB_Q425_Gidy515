@@ -1,1 +1,1 @@
-/home/emperor/gidy-turbin3/q4-turbin3-prebuilder-gidy/rust-of-rust-book/minigrep-project/target/debug/minigrep-project: /home/emperor/gidy-turbin3/q4-turbin3-prebuilder-gidy/rust-of-rust-book/minigrep-project/src/main.rs
+/home/emperor/gidy-turbin3/q4-turbin3-prebuilder-gidy/rust-of-rust-book/minigrep-project/target/debug/minigrep-project: /home/emperor/gidy-turbin3/q4-turbin3-prebuilder-gidy/rust-of-rust-book/minigrep-project/src/lib.rs /home/emperor/gidy-turbin3/q4-turbin3-prebuilder-gidy/rust-of-rust-book/minigrep-project/src/main.rs
