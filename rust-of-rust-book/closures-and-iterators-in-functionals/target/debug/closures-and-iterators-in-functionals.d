@@ -1,0 +1,1 @@
+/home/emperor/gidy-turbin3/q4-turbin3-prebuilder-gidy/rust-of-rust-book/closures-and-iterators-in-functionals/target/debug/closures-and-iterators-in-functionals: /home/emperor/gidy-turbin3/q4-turbin3-prebuilder-gidy/rust-of-rust-book/closures-and-iterators-in-functionals/src/main.rs
