@@ -9,6 +9,6 @@ pub struct List {
     pub bump: u8,
 }
 
-impl Space for Listing {
+impl Space for List {
     const INIT_SPACE: usize = 8 + 32 + 32 + 8 + 1;
 }

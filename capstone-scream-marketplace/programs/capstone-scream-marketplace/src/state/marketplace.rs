@@ -5,7 +5,7 @@ use anchor_lang::prelude::*;
 pub struct Marketplace {
     pub name: String,
     pub admin: Pubkey,
-    pub fee: u8,
+    pub fee: u16, // fee in basis points (1/100 of a percent)
     pub bump: u8, // the marketplace bump
     pub treasury_bump: u8,
     pub rewards_mint_bump: u8,
