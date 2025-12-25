@@ -37,6 +37,11 @@ pub struct Initialize<'info> {
         bump,
     )]
     pub treasury: SystemAccount<'info>, // account to hold marketplace fees
+
+    /// SPL treasury ATA (only used if SPL)
+    #[account(mut)]
+    pub treasury_payment_ata: Option<InterfaceAccount<'info, TokenAccount>>,
+
  
     #[account(
         init,

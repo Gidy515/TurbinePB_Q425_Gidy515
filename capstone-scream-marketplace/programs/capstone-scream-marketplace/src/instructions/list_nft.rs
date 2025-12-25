@@ -6,7 +6,7 @@ use anchor_spl::{associated_token::AssociatedToken,
     token_interface::{Mint, TokenAccount, TokenInterface}
 };
 
-use crate::state::{Listing, Marketplace};
+use crate::{PaymentCurrency, state::{Listing, Marketplace}};
 use crate::error::MarketplaceError;
 
 #[derive(Accounts)]
@@ -77,7 +77,7 @@ pub struct List <'info> {
 }
 
 impl <'info> List <'info> {
-    pub fn create_listing(&mut self, price: u64, bumps: &ListBumps) ->Result<()>{
+    pub fn create_listing(&mut self, price: u64, bumps: &ListBumps, payment_currency: PaymentCurrency) ->Result<()>{
         // Price must be greater than zero to prevent free listings
         require!(price > 0, MarketplaceError::InvalidPrice);
         
@@ -118,6 +118,8 @@ impl <'info> List <'info> {
             artist_mint: self.artist_mint.key(),
             price,
             bump: bumps.listing,
+            marketplace: self.marketplace.key(),
+            payment_currency,
         });
 
         Ok(())

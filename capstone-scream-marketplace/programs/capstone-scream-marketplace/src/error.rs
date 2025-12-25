@@ -47,4 +47,46 @@ pub enum MarketplaceError {
 
     #[msg("Error during token transfer for listing NFT")]
     NftTransferFailed,
+
+    #[msg("You are not authorized to delist this NFT")]
+    UnauthorizedDelist,
+
+    #[msg("The listing does not belong to this marketplace")]
+    InvalidMarketplace,
+
+    #[msg("This mint does not match the listing's artist mint")]
+    InvalidArtistMint,
+
+    #[msg("Invalid amount in the vault for withdrawal")]
+    InvalidVaultAmount,
+
+    #[msg("An error occurred closing the mint vault")]
+    VaultCloseFailed,
+
+    #[msg("The marketplace does not match the listing")]
+    InvalidMarketplaceListing,
+
+    #[msg("The specified artist does not match the listing")]
+    WrongArtist,
+
+    #[msg("The specified token mint does not match the listing")]
+    WrongTokenMint,
+
+    #[msg("The vault does not hold the correct amount of the NFT")]
+    WrongVaultAmount,
+
+    #[msg("The specified mint is not a valid NFT")]
+    WrongMintSupply,
+
+    #[msg("The specified mint does not have the correct decimals for an NFT")]
+    WrongMintDecimals,
+
+    #[msg("Invalid payment currency for this listing")]
+    InvalidPaymentCurrency,
+
+    #[msg("The payment mint does not match the listing's payment currency")]
+    InvalidPaymentMint,
+
+    #[msg("Insufficient funds to complete the purchase")]
+    InsufficientFunds,
 }
