@@ -15,6 +15,7 @@ pub struct Listing {
     pub bump: u8,
     pub marketplace: Pubkey,
     pub payment_currency: PaymentCurrency,
+    pub active: bool,
 }
 
 /*impl Space for Listing {

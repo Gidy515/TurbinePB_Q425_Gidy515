@@ -89,4 +89,10 @@ pub enum MarketplaceError {
 
     #[msg("Insufficient funds to complete the purchase")]
     InsufficientFunds,
+
+    #[msg("Mathematical operation overflowed")]
+    MathOverflow,
+
+    #[msg("NFT listing is not active")]
+    ListingInactive,
 }

@@ -15,11 +15,40 @@ pub use error::*;
 pub mod capstone_scream_marketplace {
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
-        msg!("Greetings from: {:?}", ctx.program_id);
+    pub fn initialize(ctx: Context<Initialize>, name: String, fee: u16) -> Result<()> {
+        ctx.accounts.initialize(name, fee, ctx.bumps)?;
+        //msg!("Greetings from: {:?}", ctx.program_id);
+        Ok(())
+    }
+
+    pub fn list_nft(ctx: Context<List>, price: u64, payment_currency: PaymentCurrency) -> Result<()> {
+        ctx.accounts.create_listing(price, &ctx.bumps, payment_currency)?;
+        ctx.accounts.deposit_nft()?;
+
+        Ok(())
+    }
+
+    pub fn delist_nft(ctx: Context<Delist>) -> Result<()> {
+        ctx.accounts.withdraw_nft()?;
+        ctx.accounts.close_mint_vault()?;
         Ok(())
     }
 }
 
-#[derive(Accounts)]
-pub struct Initialize {}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -120,6 +120,7 @@ impl <'info> List <'info> {
             bump: bumps.listing,
             marketplace: self.marketplace.key(),
             payment_currency,
+            active: true,
         });
 
         Ok(())
