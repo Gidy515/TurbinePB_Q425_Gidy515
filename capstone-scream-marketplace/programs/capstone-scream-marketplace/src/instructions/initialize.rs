@@ -99,7 +99,7 @@ impl <'info> Initialize<'info> {
 
         require!(
             self.treasury.key() == expected_treasury,
-            MarketplaceError::InvalidTreasury
+            MarketplaceError::ConstraintSeeds // Using generic error for PDA mismatch. ConstraintSeeds is a built-in Anchor error.
         );
 
         // Rewards mint PDA correctness check to ensure it matches expected PDA

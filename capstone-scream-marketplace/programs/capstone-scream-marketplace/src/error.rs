@@ -16,6 +16,9 @@ pub enum MarketplaceError {
     InvalidMarketplaceName,
 
     #[msg("Invalid Treasury address")]
+    ConstraintSeeds, // Using generic error for PDA mismatch. ConstraintSeeds is a built-in Anchor error.
+
+    #[msg("Invalid Treasury address")]
     InvalidTreasury,
 
     #[msg("Invalid Rewards Mint address")]
