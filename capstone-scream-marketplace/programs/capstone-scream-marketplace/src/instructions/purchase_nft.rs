@@ -168,19 +168,7 @@ impl <'info> Purchase<'info>{
             MarketplaceError::InvalidPaymentCurrency
         );
 
-        // Balance check
-        require!(
-            self.fan.lamports() >= self.listing.price,
-            MarketplaceError::InsufficientFunds
-        );
-
-        // Ensure payment currency is SOL
-        require!(
-            self.listing.payment_currency == PaymentCurrency::Sol,
-            MarketplaceError::InvalidPaymentCurrency
-        );
-        
-        // Ensure fan has sufficient funds
+        // Balance check for sufficient funds
         require!(
             self.fan.lamports() >= self.listing.price,
             MarketplaceError::InsufficientFunds
@@ -314,8 +302,8 @@ impl <'info> Purchase<'info>{
         require!(self.vault.amount == 1, MarketplaceError::WrongVaultAmount);
     
         let seeds = &[
+            &self.artist_mint.key().to_bytes()[..],
             &self.marketplace.key().to_bytes()[..],
-            &self.mint_spl.key().to_bytes()[..],
             &[self.listing.bump],
         ];
         let signer_seeds = &[&seeds[..]];
@@ -324,7 +312,7 @@ impl <'info> Purchase<'info>{
             from: self.vault.to_account_info(),
             to: self.fan_ata.to_account_info(),
             authority: self.listing.to_account_info(),
-            mint: self.mint_spl.to_account_info(),
+            mint: self.artist_mint.to_account_info(),
         };
     
         let cpi_ctx = CpiContext::new_with_signer(
@@ -333,14 +321,9 @@ impl <'info> Purchase<'info>{
             signer_seeds,
         );
     
-        transfer_checked(cpi_ctx, 1, self.mint_spl.decimals)?;
+        transfer_checked(cpi_ctx, 1, self.artist_mint.decimals)?;
     
-        // ======== close_mint_vault logic (UNCHANGED) ========
-    
-        require!(
-            self.vault.amount == 0,
-            MarketplaceError::VaultNotEmpty
-        );
+        // Closing of the account
     
         let seeds = &[
             &self.marketplace.key().to_bytes()[..],

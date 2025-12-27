@@ -33,6 +33,11 @@ pub mod capstone_scream_marketplace {
         ctx.accounts.close_mint_vault()?;
         Ok(())
     }
+
+    pub fn purchase_nft(ctx: Context<Purchase>) -> Result<()> {
+        ctx.accounts.purchase()?;
+        Ok(())
+    }
 }
 
 
