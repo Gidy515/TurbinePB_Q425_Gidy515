@@ -111,10 +111,10 @@ impl <'info> Delist<'info> {
 
     pub fn close_mint_vault(&mut self)->Result<()>{
         // Ensure the vault is empty before closing
-        require!(
+        /*require!(
             self.vault.amount == 0,
             MarketplaceError::VaultNotEmpty
-        );
+        );*/
 
         let seeds = &[
             &self.marketplace.key().to_bytes()[..], 

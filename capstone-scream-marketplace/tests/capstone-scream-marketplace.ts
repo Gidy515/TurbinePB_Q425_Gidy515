@@ -960,4 +960,141 @@ describe("capstone-scream-marketplace", () => {
       expect(err.toString()).to.include("Price");
     }
   });
+
+  async function relistNft() {
+    const newListing = PublicKey.findProgramAddressSync(
+      [marketplacePda.toBuffer(), new PublicKey(nftMint.publicKey).toBuffer()],
+      program.programId
+    )[0];
+
+    const newVault = await anchor.utils.token.associatedAddress({
+      mint: new PublicKey(nftMint.publicKey),
+      owner: newListing,
+    });
+
+    await program.methods
+      .listNft(price, { sol: {} })
+      .accountsPartial({
+        artist: artist.publicKey,
+        marketplace: marketplacePda,
+        artistMint: new PublicKey(nftMint.publicKey),
+        artistAta,
+        listing: newListing,
+        collectionMint: new PublicKey(collectionMint.publicKey),
+        metadata: findMetadataPda(umi, { mint: nftMint.publicKey })[0],
+        masterEdition: findMasterEditionPda(umi, {
+          mint: nftMint.publicKey,
+        })[0],
+        vault: newVault,
+        metadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([artist])
+      .rpc();
+
+    return { newListing, newVault };
+  }
+
+  it("Artist successfully delists NFT, vault and listing are closed", async () => {
+    // Call delist
+    await program.methods
+      .delistNft() // or delistNft() — use the exact method name in your program
+      .accountsPartial({
+        artist: artist.publicKey,
+        marketplace: marketplacePda,
+        artistMint: new PublicKey(nftMint.publicKey),
+        artistAta,
+        listing,
+        vault,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([artist])
+      .rpc();
+
+    // ---------- ASSERT NFT RETURNED ----------
+    const artistAtaAccount = await connection.getTokenAccountBalance(artistAta);
+    expect(artistAtaAccount.value.uiAmount).to.eq(1);
+
+    // ---------- ASSERT VAULT CLOSED ----------
+    const vaultAccountInfo = await connection.getAccountInfo(vault);
+    expect(vaultAccountInfo).to.be.null; // closed accounts return null
+
+    // ---------- ASSERT LISTING CLOSED ----------
+    try {
+      await program.account.listing.fetch(listing);
+      throw new Error("Listing account should be closed");
+    } catch (err) {
+      expect(err.toString()).to.include("Account does not exist");
+    }
+  });
+
+  it("Rejects delist by non-artist", async () => {
+    const { newListing, newVault } = await relistNft();
+
+    try {
+      await program.methods
+        .delistNft()
+        .accountsPartial({
+          artist: fan.publicKey, // ❌ not original artist
+          marketplace: marketplacePda,
+          artistMint: new PublicKey(nftMint.publicKey),
+          artistAta: fanAta,
+          listing: newListing,
+          vault: newVault,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([fan])
+        .rpc();
+
+      throw new Error("Non-artist delist should have failed");
+    } catch (err) {
+      expect(err.toString()).to.include("UnauthorizedDelist");
+    }
+  });
+
+  it("Rejects double delisting", async () => {
+    const { newListing, newVault } = await relistNft();
+
+    // First delist — valid
+    await program.methods
+      .delistNft()
+      .accountsPartial({
+        artist: artist.publicKey,
+        marketplace: marketplacePda,
+        artistMint: new PublicKey(nftMint.publicKey),
+        artistAta,
+        listing: newListing,
+        vault: newVault,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([artist])
+      .rpc();
+
+    // Second delist — should fail
+    await expect(
+      program.methods
+        .delistNft()
+        .accountsPartial({
+          artist: artist.publicKey,
+          marketplace: marketplacePda,
+          artistMint: new PublicKey(nftMint.publicKey),
+          artistAta,
+          listing: newListing, // ❌ already closed
+          vault: newVault, // ❌ already closed
+          tokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([artist])
+        .rpc()
+    ).to.be.rejected;
+  });
 });
