@@ -594,6 +594,93 @@ describe("capstone-scream-marketplace", () => {
     }
   });*/
 
+  it("rejects listing of a fungible mint", async () => {
+    const { createMint } = await import("@solana/spl-token");
+
+    // Create fungible mint (decimals > 0)
+    const fungibleMint = await createMint(
+      connection,
+      payer.payer, // payer
+      payer.publicKey, // mint authority
+      null,
+      6 // ❌ fungible
+    );
+
+    const fungibleAta = (
+      await getOrCreateAssociatedTokenAccount(
+        connection,
+        artist,
+        fungibleMint,
+        artist.publicKey
+      )
+    ).address;
+
+    // Create metadata so Anchor constraints pass
+    const fungibleMetadata = findMetadataPda(umi, {
+      mint: umiPublicKey(fungibleMint.toBase58()),
+    });
+
+    await createMetadataAccountV3(umi, {
+      metadata: fungibleMetadata,
+      mint: umiPublicKey(fungibleMint.toBase58()),
+      mintAuthority: creator,
+      payer: creator,
+      updateAuthority: creator.publicKey,
+      data: {
+        name: "Fungible Token",
+        symbol: "FT",
+        uri: "https://arweave.net/fungible",
+        sellerFeeBasisPoints: 0,
+        creators: null,
+        collection: null,
+        uses: null,
+      },
+      isMutable: false,
+      collectionDetails: { __option: "None" },
+    }).sendAndConfirm(umi);
+
+    const badListing = PublicKey.findProgramAddressSync(
+      [marketplacePda.toBuffer(), fungibleMint.toBuffer()],
+      program.programId
+    )[0];
+
+    const badVault = await anchor.utils.token.associatedAddress({
+      mint: fungibleMint,
+      owner: badListing,
+    });
+
+    try {
+      await program.methods
+        .listNft(price, { sol: {} })
+        .accountsPartial({
+          artist: artist.publicKey,
+          marketplace: marketplacePda,
+          artistMint: fungibleMint,
+          artistAta: fungibleAta,
+          listing: badListing,
+          collectionMint: new PublicKey(collectionMint.publicKey),
+          metadata: fungibleMetadata[0],
+          masterEdition: PublicKey.default, // no master edition
+          vault: badVault,
+          metadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([artist])
+        .rpc();
+
+      throw new Error("Fungible mint listing should have failed");
+    } catch (err) {
+      expect(err.toString()).to.satisfy(
+        (msg: string) =>
+          msg.includes("InvalidNft") ||
+          msg.includes("master") ||
+          msg.includes("Constraint")
+      );
+    }
+  });
+
   it("Artist lists an NFT successfully", async () => {
     await program.methods
       .listNft(price, { sol: {} }) // or whatever enum variant
@@ -621,6 +708,45 @@ describe("capstone-scream-marketplace", () => {
     expect(listingAccount.artist.toBase58()).to.eq(artist.publicKey.toBase58());
     expect(listingAccount.price.toNumber()).to.eq(price.toNumber());
     expect(listingAccount.active).to.eq(true);
+  });
+
+  it("rejects relisting an already escrowed NFT", async () => {
+    try {
+      // SAME NFT
+      // SAME listing PDA
+      // SAME vault
+
+      await program.methods
+        .listNft(price, { sol: {} })
+        .accountsPartial({
+          artist: artist.publicKey,
+          marketplace: marketplacePda,
+          artistMint: new PublicKey(nftMint.publicKey),
+          artistAta,
+          listing, // ← already active
+          collectionMint: new PublicKey(collectionMint.publicKey),
+          metadata: findMetadataPda(umi, { mint: nftMint.publicKey })[0],
+          masterEdition: findMasterEditionPda(umi, {
+            mint: nftMint.publicKey,
+          })[0],
+          vault, // ← already contains NFT from previous listing
+          metadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([artist])
+        .rpc();
+
+      throw new Error("Expected VaultNotEmpty");
+    } catch (err) {
+      expect(err.toString()).to.satisfy(
+        (msg: string) =>
+          msg.includes("already in use") ||
+          msg.includes("Constraint") ||
+          msg.includes("Listing")
+      );
+    }
   });
 
   /*it("rejects listing when artist does not own NFT", async () => {

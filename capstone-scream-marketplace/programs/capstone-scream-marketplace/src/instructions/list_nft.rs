@@ -64,7 +64,7 @@ pub struct List <'info> {
     pub metadata_program: Program<'info, Metadata>, // Metaplex program
 
     #[account(
-        init,
+        init_if_needed,
         payer = artist,
         associated_token::mint = artist_mint,
         associated_token::authority = listing,
