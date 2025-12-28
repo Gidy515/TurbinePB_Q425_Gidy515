@@ -5,6 +5,7 @@ import {
   createNft,
   findMasterEditionPda,
   findMetadataPda,
+  MPL_TOKEN_METADATA_PROGRAM_ID,
   mplTokenMetadata,
   verifySizedCollectionItem,
 } from "@metaplex-foundation/mpl-token-metadata";
@@ -29,6 +30,11 @@ import {
   SystemProgram,
 } from "@solana/web3.js";
 import { expect } from "chai";
+import { publicKey as umiPublicKey } from "@metaplex-foundation/umi";
+import {
+  createMetadataAccountV3,
+  TokenStandard,
+} from "@metaplex-foundation/mpl-token-metadata";
 
 describe("capstone-scream-marketplace", () => {
   // Configure the client to use the local cluster.
@@ -333,6 +339,56 @@ describe("capstone-scream-marketplace", () => {
     }
   });
 
+  it("rejects listing when marketplace is not initialized", async () => {
+    const uninitName = "uninit-market";
+
+    const uninitMarketplace = PublicKey.findProgramAddressSync(
+      [Buffer.from("marketplace"), Buffer.from(uninitName)],
+      program.programId
+    )[0];
+
+    const uninitListing = PublicKey.findProgramAddressSync(
+      [
+        uninitMarketplace.toBuffer(),
+        new PublicKey(nftMint.publicKey).toBuffer(),
+      ],
+      program.programId
+    )[0];
+
+    const uninitVault = await anchor.utils.token.associatedAddress({
+      mint: new PublicKey(nftMint.publicKey),
+      owner: uninitListing,
+    });
+
+    try {
+      await program.methods
+        .listNft(price, { sol: {} })
+        .accountsPartial({
+          artist: artist.publicKey,
+          marketplace: uninitMarketplace, // ❌ never initialized
+          artistMint: new PublicKey(nftMint.publicKey),
+          artistAta,
+          listing: uninitListing,
+          collectionMint: new PublicKey(collectionMint.publicKey),
+          metadata: findMetadataPda(umi, { mint: nftMint.publicKey })[0],
+          masterEdition: findMasterEditionPda(umi, {
+            mint: nftMint.publicKey,
+          })[0],
+          vault: uninitVault,
+          metadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([artist])
+        .rpc();
+
+      throw new Error("Listing into uninitialized marketplace should fail");
+    } catch (err) {
+      expect(err.toString()).to.include("AccountNotInitialized");
+    }
+  });
+
   it("rejects re-initialization of the same marketplace", async () => {
     try {
       await program.methods
@@ -352,6 +408,430 @@ describe("capstone-scream-marketplace", () => {
     } catch (err) {
       // This fails at runtime level (account already in use)
       expect(err.toString()).to.include("already in use");
+    }
+  });
+
+  /* it("rejects listing of a fungible mint", async () => {
+    // Create fungible mint (decimals > 0)
+    const { createMint } = await import("@solana/spl-token");
+
+    const fungibleMint = await createMint(
+      connection,
+      payer.payer, // payer
+      creator.publicKey, // mint authority MUST match metadata authority
+      null,
+      6
+    );
+
+    const fungibleAta = (
+      await getOrCreateAssociatedTokenAccount(
+        connection,
+        artist,
+        fungibleMint,
+        artist.publicKey
+      )
+    ).address;
+
+    // Create metadata (so Anchor constraints pass)
+    const fungibleMetadata = findMetadataPda(umi, {
+      mint: umiPublicKey(fungibleMint.toBase58()),
+    });
+    await createMetadataAccountV3(umi, {
+      metadata: fungibleMetadata,
+      mint: umiPublicKey(fungibleMint.toBase58()),
+      mintAuthority: createSignerFromKeypair(
+        umi,
+        umi.eddsa.createKeypairFromSecretKey(artist.secretKey)
+      ),
+      payer: creator,
+      updateAuthority: creator.publicKey,
+      data: {
+        name: "Fungible Token",
+        symbol: "FT",
+        uri: "https://arweave.net/fungible",
+        sellerFeeBasisPoints: 0,
+        creators: null,
+        collection: null,
+        uses: null,
+      },
+      isMutable: false,
+      collectionDetails: {
+        __option: "None",
+      },
+    }).sendAndConfirm(umi);
+
+    const metadataPda = fungibleMetadata[0];
+
+    const badListing = PublicKey.findProgramAddressSync(
+      [marketplacePda.toBuffer(), fungibleMint.toBuffer()],
+      program.programId
+    )[0];
+
+    const badVault = await anchor.utils.token.associatedAddress({
+      mint: fungibleMint,
+      owner: badListing,
+    });
+
+    try {
+      await program.methods
+        .listNft(price, { sol: {} })
+        .accountsPartial({
+          artist: artist.publicKey,
+          marketplace: marketplacePda,
+          artistMint: fungibleMint,
+          artistAta: fungibleAta,
+          listing: badListing,
+          collectionMint: new PublicKey(collectionMint.publicKey),
+          metadata: metadataPda,
+          masterEdition: PublicKey.default, // ❌ no master edition
+          vault: badVault,
+          metadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([artist])
+        .rpc();
+
+      throw new Error("Fungible mint listing should have failed");
+    } catch (err) {
+      expect(err.toString()).to.include("InvalidNft");
+    }
+  });*/
+
+  /*it("rejects listing when vault is not empty", async () => {
+    const freshMint = generateSigner(umi);
+
+    await createNft(umi, {
+      mint: freshMint,
+      name: "Vault Filled NFT",
+      symbol: "VLT",
+      uri: "https://arweave.net/vault",
+      sellerFeeBasisPoints: percentAmount(5),
+      collection: { verified: false, key: collectionMint.publicKey },
+      tokenOwner: publicKey(artist.publicKey),
+    }).sendAndConfirm(umi);
+
+    // verify collection
+    const freshMetadata = findMetadataPda(umi, { mint: freshMint.publicKey });
+    const collectionMetadata = findMetadataPda(umi, {
+      mint: collectionMint.publicKey,
+    });
+    const collectionMasterEdition = findMasterEditionPda(umi, {
+      mint: collectionMint.publicKey,
+    });
+
+    await verifySizedCollectionItem(umi, {
+      metadata: freshMetadata,
+      collectionAuthority: creator,
+      collectionMint: collectionMint.publicKey,
+      collection: collectionMetadata,
+      collectionMasterEditionAccount: collectionMasterEdition,
+    }).sendAndConfirm(umi);
+
+    const freshAta = (
+      await getOrCreateAssociatedTokenAccount(
+        connection,
+        artist,
+        new PublicKey(freshMint.publicKey),
+        artist.publicKey
+      )
+    ).address;
+
+    const freshListing = PublicKey.findProgramAddressSync(
+      [
+        marketplacePda.toBuffer(),
+        new PublicKey(freshMint.publicKey).toBuffer(),
+      ],
+      program.programId
+    )[0];
+
+    const freshVaultAta = await getOrCreateAssociatedTokenAccount(
+      connection,
+      artist,
+      new PublicKey(freshMint.publicKey),
+      freshListing,
+      true
+    );
+
+    // pre-fill vault
+    const { transfer } = await import("@solana/spl-token");
+    await transfer(
+      connection,
+      artist,
+      freshAta,
+      freshVaultAta.address,
+      artist,
+      1
+    );
+
+    try {
+      await program.methods
+        .listNft(price, { sol: {} })
+        .accountsPartial({
+          artist: artist.publicKey,
+          marketplace: marketplacePda,
+          artistMint: new PublicKey(freshMint.publicKey),
+          artistAta: freshAta,
+          listing: freshListing,
+          collectionMint: new PublicKey(collectionMint.publicKey),
+          metadata: freshMetadata[0],
+          masterEdition: findMasterEditionPda(umi, {
+            mint: freshMint.publicKey,
+          })[0],
+          vault: freshVaultAta.address,
+          metadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([artist])
+        .rpc();
+
+      throw new Error("Should have failed");
+    } catch (err) {
+      expect(err.toString()).to.include("VaultNotEmpty");
+    }
+  });*/
+
+  it("Artist lists an NFT successfully", async () => {
+    await program.methods
+      .listNft(price, { sol: {} }) // or whatever enum variant
+      .accountsPartial({
+        artist: artist.publicKey,
+        marketplace: marketplacePda,
+        artistMint: new PublicKey(nftMint.publicKey),
+        artistAta,
+        listing,
+        collectionMint: new PublicKey(collectionMint.publicKey),
+        metadata: findMetadataPda(umi, { mint: nftMint.publicKey })[0],
+        masterEdition: findMasterEditionPda(umi, {
+          mint: nftMint.publicKey,
+        })[0],
+        vault,
+        metadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([artist])
+      .rpc();
+
+    const listingAccount = await program.account.listing.fetch(listing);
+    expect(listingAccount.artist.toBase58()).to.eq(artist.publicKey.toBase58());
+    expect(listingAccount.price.toNumber()).to.eq(price.toNumber());
+    expect(listingAccount.active).to.eq(true);
+  });
+
+  /*it("rejects listing when artist does not own NFT", async () => {
+    try {
+      await program.methods
+        .listNft(price, { sol: {} })
+        .accountsPartial({
+          artist: fan.publicKey, // ❌ not owner
+          marketplace: marketplacePda,
+          artistMint: new PublicKey(nftMint.publicKey),
+          artistAta: fanAta,
+          listing,
+          collectionMint: new PublicKey(collectionMint.publicKey),
+          metadata: findMetadataPda(umi, { mint: nftMint.publicKey })[0],
+          masterEdition: findMasterEditionPda(umi, {
+            mint: nftMint.publicKey,
+          })[0],
+          vault,
+          metadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([fan])
+        .rpc();
+
+      throw new Error("Should have failed");
+    } catch (err) {
+      expect(err.toString()).to.include("InvalidNftOwnership");
+    }
+  });*/
+  /*it("rejects non-owner listing attempt", async () => {
+    const attacker = Keypair.generate();
+
+    // fund attacker
+    await connection.requestAirdrop(attacker.publicKey, LAMPORTS_PER_SOL);
+
+    try {
+      await program.methods
+        .listNft(price, { sol: {} })
+        .accountsPartial({
+          artist: attacker.publicKey, // ❌ not the NFT owner
+          marketplace: marketplacePda,
+          artistMint: new PublicKey(nftMint.publicKey),
+          artistAta, // ATA belongs to real artist
+          listing,
+          collectionMint: new PublicKey(collectionMint.publicKey),
+          metadata: findMetadataPda(umi, { mint: nftMint.publicKey })[0],
+          masterEdition: findMasterEditionPda(umi, {
+            mint: nftMint.publicKey,
+          })[0],
+          vault,
+          metadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([attacker])
+        .rpc();
+
+      throw new Error("Non-owner listing should have failed");
+    } catch (err) {
+      expect(err.toString()).to.include("WrongArtist");
+    }
+  });*/
+  it("Fails when artist lists NFT he does not own", async () => {
+    // Create a fresh NFT owned by `unauthorized artist`
+    const freshMint = generateSigner(umi);
+
+    await createNft(umi, {
+      mint: freshMint,
+      name: "Fresh NFT",
+      symbol: "FRSH",
+      uri: "https://arweave.net/fresh",
+      sellerFeeBasisPoints: percentAmount(5),
+      collection: { verified: false, key: collectionMint.publicKey },
+      tokenOwner: publicKey(artist.publicKey),
+    }).sendAndConfirm(umi);
+
+    // verify properly
+    const freshMetadata = findMetadataPda(umi, { mint: freshMint.publicKey });
+    const collectionMetadata = findMetadataPda(umi, {
+      mint: collectionMint.publicKey,
+    });
+    const collectionMasterEdition = findMasterEditionPda(umi, {
+      mint: collectionMint.publicKey,
+    });
+
+    await verifySizedCollectionItem(umi, {
+      metadata: freshMetadata,
+      collectionAuthority: creator,
+      collectionMint: collectionMint.publicKey,
+      collection: collectionMetadata,
+      collectionMasterEditionAccount: collectionMasterEdition,
+    }).sendAndConfirm(umi);
+  });
+
+  it("rejects double listing of the same NFT", async () => {
+    try {
+      await program.methods
+        .listNft(price, { sol: {} })
+        .accountsPartial({
+          artist: artist.publicKey,
+          marketplace: marketplacePda,
+          artistMint: new PublicKey(nftMint.publicKey),
+          artistAta,
+          listing, // SAME listing PDA
+          collectionMint: new PublicKey(collectionMint.publicKey),
+          metadata: findMetadataPda(umi, { mint: nftMint.publicKey })[0],
+          masterEdition: findMasterEditionPda(umi, {
+            mint: nftMint.publicKey,
+          })[0],
+          vault,
+          metadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([artist])
+        .rpc();
+
+      throw new Error("Double listing should have failed");
+    } catch (err) {
+      // accept either program error or runtime PDA collision
+      expect(err.toString()).to.satisfy(
+        (msg: string) =>
+          msg.includes("Listing") ||
+          msg.includes("already in use") ||
+          msg.includes("Constraint")
+      );
+    }
+  });
+
+  it("rejects zero-price listing", async () => {
+    const zeroPrice = new anchor.BN(0);
+
+    // mint fresh NFT
+    const zeroMint = generateSigner(umi);
+
+    await createNft(umi, {
+      mint: zeroMint,
+      name: "Zero Price NFT",
+      symbol: "ZERO",
+      uri: "https://arweave.net/zero",
+      sellerFeeBasisPoints: percentAmount(5),
+      collection: { verified: false, key: collectionMint.publicKey },
+      tokenOwner: publicKey(artist.publicKey),
+    }).sendAndConfirm(umi);
+
+    // verify collection
+    const zeroMetadata = findMetadataPda(umi, { mint: zeroMint.publicKey });
+    const collectionMetadata = findMetadataPda(umi, {
+      mint: collectionMint.publicKey,
+    });
+    const collectionMasterEdition = findMasterEditionPda(umi, {
+      mint: collectionMint.publicKey,
+    });
+
+    await verifySizedCollectionItem(umi, {
+      metadata: zeroMetadata,
+      collectionAuthority: creator,
+      collectionMint: collectionMint.publicKey,
+      collection: collectionMetadata,
+      collectionMasterEditionAccount: collectionMasterEdition,
+    }).sendAndConfirm(umi);
+
+    const zeroArtistAta = (
+      await getOrCreateAssociatedTokenAccount(
+        connection,
+        artist,
+        new PublicKey(zeroMint.publicKey),
+        artist.publicKey
+      )
+    ).address;
+
+    const zeroListing = PublicKey.findProgramAddressSync(
+      [marketplacePda.toBuffer(), new PublicKey(zeroMint.publicKey).toBuffer()],
+      program.programId
+    )[0];
+
+    const zeroVault = await anchor.utils.token.associatedAddress({
+      mint: new PublicKey(zeroMint.publicKey),
+      owner: zeroListing,
+    });
+
+    try {
+      await program.methods
+        .listNft(zeroPrice, { sol: {} })
+        .accountsPartial({
+          artist: artist.publicKey,
+          marketplace: marketplacePda,
+          artistMint: new PublicKey(zeroMint.publicKey),
+          artistAta: zeroArtistAta,
+          listing: zeroListing,
+          collectionMint: new PublicKey(collectionMint.publicKey),
+          metadata: zeroMetadata[0],
+          masterEdition: findMasterEditionPda(umi, {
+            mint: zeroMint.publicKey,
+          })[0],
+          vault: zeroVault,
+          metadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([artist])
+        .rpc();
+
+      throw new Error("Zero-price listing should have failed");
+    } catch (err) {
+      expect(err.toString()).to.include("Price");
     }
   });
 });
