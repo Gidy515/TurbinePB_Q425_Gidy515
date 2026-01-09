@@ -12,7 +12,7 @@ capstone_scream_marketplace = "2d8HV2bbi5j59yxnnfsPphvQhGQHHbzyPasbDBLbkAmo"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "localnet"
+cluster = "devnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]

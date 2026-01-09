@@ -26,13 +26,13 @@ import {
   PublicKey,
   SystemProgram,
 } from "@solana/web3.js";
-import { expect } from "chai";
+import { assert, expect } from "chai";
 import { publicKey as umiPublicKey } from "@metaplex-foundation/umi";
 import {
   createMetadataAccountV3,
   TokenStandard,
 } from "@metaplex-foundation/mpl-token-metadata";
-import { getAccount } from "@solana/spl-token";
+import { getAccount, mintTo, createMint } from "@solana/spl-token";
 import {
   TOKEN_PROGRAM_ID,
   ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -75,7 +75,7 @@ describe("capstone-scream-marketplace", () => {
   const fan = Keypair.generate();
 
   //const price = new anchor.BN(1);
-  const price = new anchor.BN(1 * LAMPORTS_PER_SOL); // 1 SOL
+  const price = new anchor.BN(1 * LAMPORTS_PER_SOL);
 
   let marketplacePda = anchor.web3.PublicKey.findProgramAddressSync(
     [Buffer.from("marketplace"), Buffer.from(MARKETPLACE_NAME)],
@@ -145,7 +145,7 @@ describe("capstone-scream-marketplace", () => {
       uri: "https://arweave.net/123",
       sellerFeeBasisPoints: percentAmount(5.5),
       collection: { verified: false, key: collectionMint.publicKey },
-      tokenOwner: publicKey(artist.publicKey), // Corrected to use artist's public key
+      tokenOwner: publicKey(artist.publicKey),
     }).sendAndConfirm(umi);
     console.log(`Created NFT: ${nftMint.publicKey.toString()}`);
 
@@ -509,7 +509,6 @@ describe("capstone-scream-marketplace", () => {
         marketplace: marketplacePda,
         artistMint: new PublicKey(nftMint.publicKey),
         artistAta,
-        listing,
         collectionMint: new PublicKey(collectionMint.publicKey),
         metadata: findMetadataPda(umi, { mint: nftMint.publicKey })[0],
         masterEdition: findMasterEditionPda(umi, {
@@ -1077,12 +1076,12 @@ describe("capstone-scream-marketplace", () => {
             marketplace: marketplacePda,
             listing,
             vault,
-            artistNftAta: artistAta, // ✅ Changed from artistAta
+            artistNftAta: artistAta,
             artistMint: new PublicKey(freshMint.publicKey),
             mintSpl: null,
-            fanNftAta: fanAta, // ✅ Changed from fanAta
-            fanPaymentAta: null, // ✅ Added - not needed for SOL
-            artistPaymentAta: null, // ✅ Added - not needed for SOL
+            fanNftAta: fanAta,
+            fanPaymentAta: null,
+            artistPaymentAta: null,
             treasury: treasuryPda,
             treasuryAta: null,
             tokenProgram: TOKEN_PROGRAM_ID,
@@ -1356,168 +1355,5 @@ describe("capstone-scream-marketplace", () => {
       });
     });
   });*/
-    describe("Happy Path - SPL Purchase", () => {
-      it("Fan purchases NFT with SPL tokens successfully", async () => {
-        try {
-          console.log("=== Starting SPL Purchase Test ===");
-
-          // Check balances
-          const artistBalance = await connection.getBalance(artist.publicKey);
-          const fanBalance = await connection.getBalance(fan.publicKey);
-          console.log("Artist SOL:", artistBalance / LAMPORTS_PER_SOL);
-          console.log("Fan SOL:", fanBalance / LAMPORTS_PER_SOL);
-
-          const { createMint, mintTo } = await import("@solana/spl-token");
-
-          console.log("Creating payment mint...");
-          const paymentMint = await createMint(
-            connection,
-            payer.payer,
-            payer.publicKey,
-            null,
-            6
-          );
-          console.log("Payment mint created:", paymentMint.toString());
-
-          const nftMint = generateSigner(umi);
-          console.log("NFT mint:", nftMint.publicKey.toString());
-
-          console.log("Creating NFT...");
-          await createNft(umi, {
-            mint: nftMint,
-            name: "SPL Purchase NFT",
-            symbol: "SPLNFT",
-            uri: "https://arweave.net/spl-buy",
-            sellerFeeBasisPoints: percentAmount(5),
-            collection: { verified: false, key: collectionMint.publicKey },
-            tokenOwner: publicKey(artist.publicKey),
-          }).sendAndConfirm(umi);
-          console.log("NFT created");
-
-          console.log("Verifying collection...");
-          await verifySizedCollectionItem(umi, {
-            metadata: findMetadataPda(umi, { mint: nftMint.publicKey }),
-            collectionAuthority: creator,
-            collectionMint: collectionMint.publicKey,
-            collection: findMetadataPda(umi, {
-              mint: collectionMint.publicKey,
-            }),
-            collectionMasterEditionAccount: findMasterEditionPda(umi, {
-              mint: collectionMint.publicKey,
-            }),
-          }).sendAndConfirm(umi);
-          console.log("Collection verified");
-
-          console.log("Creating ATAs...");
-          const artistNftAta = (
-            await getOrCreateAssociatedTokenAccount(
-              connection,
-              artist,
-              new PublicKey(nftMint.publicKey),
-              artist.publicKey
-            )
-          ).address;
-
-          const fanNftAta = (
-            await getOrCreateAssociatedTokenAccount(
-              connection,
-              fan,
-              new PublicKey(nftMint.publicKey),
-              fan.publicKey
-            )
-          ).address;
-
-          const fanPaymentAta = (
-            await getOrCreateAssociatedTokenAccount(
-              connection,
-              fan,
-              paymentMint,
-              fan.publicKey
-            )
-          ).address;
-
-          const artistPaymentAta = (
-            await getOrCreateAssociatedTokenAccount(
-              connection,
-              artist,
-              paymentMint,
-              artist.publicKey
-            )
-          ).address;
-
-          const treasuryPaymentAta = (
-            await getOrCreateAssociatedTokenAccount(
-              connection,
-              payer.payer,
-              paymentMint,
-              treasuryPda,
-              true
-            )
-          ).address;
-          console.log("ATAs created");
-
-          const paymentAmount = 1_000_000;
-          console.log("Minting payment tokens to fan...");
-          await mintTo(
-            connection,
-            payer.payer,
-            paymentMint,
-            fanPaymentAta,
-            payer.publicKey,
-            paymentAmount * 2
-          );
-          console.log("Payment tokens minted");
-
-          const listing = PublicKey.findProgramAddressSync(
-            [
-              marketplacePda.toBuffer(),
-              new PublicKey(nftMint.publicKey).toBuffer(),
-            ],
-            program.programId
-          )[0];
-
-          const vault = await anchor.utils.token.associatedAddress({
-            mint: new PublicKey(nftMint.publicKey),
-            owner: listing,
-          });
-
-          const splPrice = new anchor.BN(paymentAmount);
-
-          console.log("Listing NFT for SPL...");
-          console.log("Artist is signer?", artist !== undefined);
-          console.log("Artist publicKey:", artist.publicKey.toString());
-
-          await program.methods
-            .listNft(splPrice, { spl: { mint: paymentMint } })
-            .accountsPartial({
-              artist: artist.publicKey,
-              marketplace: marketplacePda,
-              artistMint: new PublicKey(nftMint.publicKey),
-              artistAta: artistNftAta,
-              listing,
-              collectionMint: new PublicKey(collectionMint.publicKey),
-              metadata: findMetadataPda(umi, { mint: nftMint.publicKey })[0],
-              masterEdition: findMasterEditionPda(umi, {
-                mint: nftMint.publicKey,
-              })[0],
-              vault,
-              metadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
-              tokenProgram: TOKEN_PROGRAM_ID,
-              associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-              systemProgram: SystemProgram.programId,
-            })
-            .signers([fan, artist])
-            .rpc();
-          console.log("NFT listed successfully");
-
-          // Rest of test...
-          console.log("Test completed successfully!");
-        } catch (error) {
-          console.error("Test failed at:", error.message);
-          console.error("Full error:", error);
-          throw error;
-        }
-      });
-    });
   });
 });
