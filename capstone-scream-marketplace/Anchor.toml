@@ -8,6 +8,10 @@ skip-lint = false
 [programs.localnet]
 capstone_scream_marketplace = "2d8HV2bbi5j59yxnnfsPphvQhGQHHbzyPasbDBLbkAmo"
 
+[programs.devnet]
+capstone_scream_marketplace = "2d8HV2bbi5j59yxnnfsPphvQhGQHHbzyPasbDBLbkAmo"
+
+
 [registry]
 url = "https://api.apr.dev"
 
